@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+#[derive(Debug)]
 pub enum Method {
     GET, // 0 // GET will contain a String
     DELETE, // 1 // DELETE will contain a 64byte uint

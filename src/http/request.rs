@@ -4,19 +4,35 @@ use super::method::{Method, MethodError};
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt::{Formatter, Display, Result as FmtResult, Debug};
+use super::QueryString;
 
-pub struct Request {
-    path: String,
-    query_string: Option<String>, // Optional params, can be "none" or a string
+#[derive(Debug)]
+pub struct Request<'buf> {
+    path: &'buf str,
+    query_string: Option<QueryString<'buf>>, // Optional params, can be "none" or a string
     method: Method,
+}
+
+impl<'buf> Request<'buf> {
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    pub fn method(&self) -> &Method {
+        &self.method
+    }
+
+    pub fn query_string(&self) -> Option<&QueryString> {
+        self.query_string.as_ref()
+    }
 }
 
 // Extend and say how to handle conversion to Request
 // Now a Request object can call .try_form()
-impl TryFrom<&[u8]> for Request {
+impl<'buf> TryFrom<&'buf  [u8]> for Request<'buf> {
     type Error = ParseError;
 
-    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
+    fn try_from(buf: &'buf [u8]) -> Result<Request<'buf>, Self::Error> {
         let request = str::from_utf8(buf)?;
 
         let (method, request) = get_next_word(request).ok_or(ParseError::InvalidRequest)?;
@@ -31,11 +47,15 @@ impl TryFrom<&[u8]> for Request {
 
         let mut query_string = None;
         if let Some(i) = path.find('?') {
-            query_string = Some(&path[i + 1..]);
+            query_string = Some(QueryString::from(&path[i + 1..]));
             path = &path[..i];
         }
 
-        unimplemented!()
+        Ok(Self {
+            path,
+            query_string,
+            method,
+        })
     }
 }
 
